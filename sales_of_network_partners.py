@@ -4,16 +4,20 @@ import scipy.stats as stats
 import matplotlib.pyplot as plt
 import numpy as np
 
+top = 5    # количество Топ партнеров для графиков
 data_import = os.getcwd().replace('\\', '/') + '/' + 'month_net.txt'
 
+mode = 'txt'
 if os.path.exists(data_import):    # проверяем наличие базы данных
     print('Загружаем базу данных...')
-    df = pd.read_csv(data_import, sep='	', encoding='ANSI', header=10, nrows=200000)  # загружаем базу
+    df = pd.read_csv(data_import, sep='	', encoding='ANSI', header=10)  # загружаем базу
     print('База данных загружена, программа готова к работе.')
 elif os.path.exists(os.getcwd().replace('\\', '/') + '/' + 'month_net.xls'):
     data_import = os.getcwd().replace('\\', '/') + '/' + 'month_net.xls'
+    mode = 'xls'
     print('Загружаем базу данных...')
-    df = pd.read_csv(data_import, sep='	', encoding='ANSI', header=10, nrows=200000)  # загружаем базу
+    #df = pd.read_csv(data_import, sep='	', encoding='ANSI', header=10)  # загружаем базу
+    df = pd.read_excel(data_import, sheet_name='Лист Клиент', header=10, nrows=200000)
     print('База данных загружена, программа готова к работе.')
 else:
     print('База данных не найдена.')
@@ -21,23 +25,31 @@ else:
     print('Загруженный файл разместите в директорию:', os.getcwd())
     input()
 
+
+
 # Чистим базу
+df['Код сети'] = df['Код сети'].astype('str')
+df['Код сети'] = df['Код сети'].str.replace(' ', '')
 df = df[df['Код сети'].str.isdigit()]    # удаляем все нечисловые значения, вроде "Итого"
-for i in df.columns[8:]:    # переводим все колонки в число
-     df[i] = df[i].str.replace(',', '.')
-     df[i] = df[i].str.replace(' ', '')
-     df[i] = df[i].astype(float)
+
+
+if mode == 'txt':
+    for i in df.columns[8:]:  # переводим все колонки в число
+        df[i] = df[i].str.replace(',', '.')
+        df[i] = df[i].str.replace(' ', '')
+        df[i] = df[i].astype(float)
+
 
 # Выводим прирост месяц к месяцу
-df['sales growth'] = df['T'] - df['-12']
-df = df.sort_values(by='sales growth')
+df['Прирост'] = df['T'] - df['-12']
+df = df.sort_values(by='Прирост')
 
 # Выводим прирост по  валовой прибыли месяц к месяцу
-df['gross margin T'] = df['T'] - (df['T'] / df['Т(КТН)'])
-df['gross margin T'] = df['gross margin T'].fillna(0.0) // 1
+df['ВП T'] = df['T'] - (df['T'] / df['Т(КТН)'])
+df['ВП T'] = df['ВП T'].fillna(0.0) // 1
 
 for i in range(-1, -13, -1):    # выводим КТН
-    columns = 'gross margin ' + str(i)
+    columns = 'ВП ' + str(i)
     col_ktn = str(i) + '(КТН)'
     df[columns] = df[str(i)] - (df[str(i)] / df[col_ktn])
     df[columns] = df[columns].fillna(0.0) // 1
@@ -51,11 +63,14 @@ df_unique.columns = ['Код сети', 'Название сети']
 df_unique.index= df_unique['Код сети']
 #print(df_unique)
 
+
+
 # Получаем суммы дубликадов по ключу код сети
 df.drop(['Название сети', 'Регион', 'Логин ТРП', 'Код ТП', 'ФИО ТП', 'Код партнера', 'Название партнера'], axis=1, inplace=True)
 df = df.groupby('Код сети').sum()
 df.insert(loc=0, column='Название сети', value=df_unique['Название сети'])    # добавляем название сетей по индексу
-df = df.sort_values(by='sales growth')    # сортируем продажи
+df = df.sort_values(by='Прирост')    # сортируем продажи
+
 
 # Удаляем столбцы с КТН
 for i in df.columns:
@@ -64,10 +79,10 @@ for i in df.columns:
 #print(df.to_string(max_colwidth=15))
 
 # Выводим маркер партнеров без сделок
-df['no sales'] = df['T'] < 10000
+df['Нет продаж'] = df['T'] < 10000
 
 # Выводим маркер угрозы прошлого года - major deal
-df['major deal'] = df['-11'] > ((df['T'] + df['-1'])/2 * 1.5)
+df['Нестандарт'] = df['-11'] > ((df['T'] + df['-1'])/2 * 1.5)
 
 # Добавляем строку суммы всех колонок
 d = df.dtypes
@@ -80,8 +95,11 @@ df['zscore_df'] = stats.zscore(df['Отгрузка'][:-1])    # модуль sc
 # Сохраняем результат
 for i in df.columns[1:-2]:    # переводим все колонки в число
      df[i] = df[i].astype(int)
-data_export = os.getcwd().replace('\\', '/') + '/' + 'month_net_export.csv'
-df.to_csv(data_export, sep=';', encoding='windows-1251', index=True, mode='w')
+#data_export = os.getcwd().replace('\\', '/') + '/' + 'month_net_export.csv'
+#df.to_csv(data_export, sep=';', encoding='windows-1251', index=True, mode='w')
+
+df.to_excel('Отгрузка_по_кодам.xlsx', index=False)
+
 
 # Статистика
 stat_column = df['T'][:-1]
@@ -102,9 +120,10 @@ print('Максимальное значение текущего месяца:'
 print('Оборот текущего месяца:', df['T'][-1])
 print('Оборот в прошлом году:', df['-12'][-1])
 print('Прирост оборота в руб.:', df['T'][-1] - df['-12'][-1], 'в процентах:', int((df['T'][-1] / df['-12'][-1] -1) * 100), '%')
-print('ВП текущего месяца:', df['gross margin T'][-1])
-print('ВП в прошлом году:', df['gross margin -12'][-1])
-print('Прирост ВП в руб.:', df['gross margin T'][-1] - df['gross margin -12'][-1], 'в процентах:', int((df['gross margin T'][-1] / df['gross margin -12'][-1] -1) * 100), '%')
+print('ВП текущего месяца:', df['ВП T'][-1])
+print('ВП в прошлом году:', df['ВП -12'][-1])
+print('Прирост ВП в руб.:', df['ВП T'][-1] - df['ВП -12'][-1], 'в процентах:', int((df['ВП T'][-1] / df['ВП -12'][-1] -1) * 100), '%')
+
 
 # matplotlib
 # ----------------------------------------
@@ -112,8 +131,9 @@ print('Прирост ВП в руб.:', df['gross margin T'][-1] - df['gross ma
 fig, ax = plt.subplots(2, 3, figsize=(15, 9))
 
 # Анти ТОП - график bar
-x_bar_anti = list(map(lambda x: x[:10] if len(x) > 10 else x, df['Название сети'][:5])) # Укарачиваем длину названий
-y_bar_anti = df['sales growth'][:5] // 1000000
+x_bar_anti = list(map(lambda x: x[:10] if len(x) > 10 else x, df['Название сети'][:top])) # Укарачиваем длину названий
+y_bar_anti = df['Прирост'][:top] // 1000000
+
 ax[0, 0].bar(x_bar_anti, y_bar_anti)    # сам график
 ax[0, 0].set(ylabel='Отток к прошлому году в млн. руб.', title='Анти ТОП-5')
 ax[0, 0].tick_params(axis='x', which='major', labelsize=8, rotation=20)    # поворачиваем ось Х, настраиваем шрифт
@@ -121,7 +141,7 @@ for i in range(len(x_bar_anti)):    # подписываем столбцы
      ax[0, 0].text(i, y_bar_anti[i], y_bar_anti[i])
 print()
 # Анти ТОП - график plot
-for i in range(5):
+for i in range(top):
      x_plot_anti = df.columns[13:0:-1]
      y_plot_anti = df.iloc[i][13:0:-1]
      ax[1, 0].plot(x_plot_anti, y_plot_anti, label=df['Название сети'][i])
@@ -133,8 +153,8 @@ ax[1, 0].legend(fontsize=6)
 ax[1, 0].grid()
 
 # ТОП - график bar
-x_bar_top = list(map(lambda x: x[:10] if len(x) > 10 else x, df['Название сети'][-6:-1]))    # Укарачиваем длину названий
-y_bar_top = df['sales growth'][-6:-1] // 1000000
+x_bar_top = list(map(lambda x: x[:10] if len(x) > 10 else x, df['Название сети'][top * -1 - 1:-1]))    # Укарачиваем длину названий
+y_bar_top = df['Прирост'][top * -1 - 1:-1] // 1000000    # "top * -1 - 1" - это список с конца +1 строка, так как последняя строка df - ИТОГО
 
 ax[0, 1].bar(x_bar_top, y_bar_top)    # сам график
 ax[0, 1].set(ylabel='Прирост к прошлому году в млн. руб.', title='ТОП-5')    # даем имя
@@ -143,7 +163,7 @@ for i in range(len(x_bar_top)):    # подписываем столбцы
      ax[0, 1].text(i, y_bar_top[i], y_bar_top[i])
 
 # ТОП - график plot
-for i in range(-6, -1):
+for i in range(top * -1 - 1, -1):
      x_plot_anti = df.columns[13:0:-1]
      y_plot_anti = df.iloc[i][13:0:-1]
      ax[1, 1].plot(x_plot_anti, y_plot_anti, label=df['Название сети'][i])
