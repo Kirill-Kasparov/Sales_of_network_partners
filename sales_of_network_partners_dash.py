@@ -11,8 +11,8 @@ import plotly.express as px
 
 def workind_days():
     # Получаем дату из файла
-    creation_time = pd.read_excel(data_import, sheet_name='Лист Клиент', header=9, nrows=10)
-    creation_time = creation_time.columns[0].replace('Время создания отчета: ', '').split()
+    creation_time = pd.read_excel(data_import, sheet_name='Лист Клиент', header=1, nrows=1)
+    creation_time = creation_time.columns[0].replace('Отчётная дата: ', '').split()
     creation_time = creation_time[0].split('.')
     ddf = datetime.date(int(creation_time[2]), int(creation_time[1]), int(creation_time[0]))
 
@@ -71,7 +71,6 @@ def workind_days():
     date_lst = [start_date, start_date_2, now_date, now_date_2, end_date, end_date_2, now_working_days, now_working_days_2, end_working_days, end_working_days_2]
     return date_lst
 
-
 top = 5    # количество Топ партнеров для графиков
 data_import = os.getcwd().replace('\\', '/') + '/' + 'month_net.txt'
 
@@ -100,6 +99,7 @@ if mode == 'txt':
     for i in df.columns[8:]:  # переводим все колонки в число
         df[i] = df[i].str.replace(',', '.')
         df[i] = df[i].str.replace(' ', '')
+        df[i] = df[i].fillna('0')
         df[i] = df[i].astype(float)
 
 
