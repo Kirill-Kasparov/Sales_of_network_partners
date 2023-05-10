@@ -234,12 +234,24 @@ table_top = html.Table(
     [html.Tr([html.Th(col) for col in df_top.columns])] +
     [html.Tr([html.Td(df_top.iloc[i][col]) for col in df_top.columns]) for i in range(len(df_top))], className="table")
 
+# Таблица привлеченные сети
+df_stars = df[((df['T'] + df['-1'] + df['-2']) > ((df['-12'] + df['-11'] + df['-10']) * 2)) & ((df['T'] + df['-1'] + df['-2']) > 10000000)]
+df_stars = df_stars.iloc[:, 0:14]
+for i in range(1, len(df_stars.columns)):    # округляем до млн. руб.
+    df_stars.iloc[:, i] = df_stars.iloc[:, i] // 1000000
+table_stars = html.Table(
+    [html.Tr([html.Th(col) for col in df_stars.columns])] +
+    [html.Tr([html.Td(df_stars.iloc[i][col]) for col in df_stars.columns]) for i in range(len(df_stars))], className="table")
+
+
 # Таблица Потеря продаж 3 мес
 df_lost = df[(df['T'] < 1000) & (df['-1'] < 1000) & (df['-2'] < 1000)]
 df_lost = df_lost.iloc[:, 0:14]
 table_lost = html.Table(
     [html.Tr([html.Th(col) for col in df_lost.columns])] +
     [html.Tr([html.Td(df_lost.iloc[i][col]) for col in df_lost.columns]) for i in range(len(df_lost))], className="table")
+
+
 
 # Создаем дашборд
 app = dash.Dash(__name__)
@@ -266,6 +278,10 @@ app.layout = html.Div(style={'background-image': 'url("/assets/bg.jpg")',
     html.H1(children='Риски следующего месяца (оборот в млн. руб.)', className="header-title", ),
     html.Br(),
     table,
+    html.Br(),
+    html.H1(children='Привлеченные сети', className="header-title", ),
+    html.Br(),
+    table_stars,
     html.Br(),
     html.H1(children='Потерянные сети', className="header-title", ),
     html.Br(),
