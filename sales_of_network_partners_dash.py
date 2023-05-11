@@ -44,7 +44,7 @@ def workind_days():
             now_working_days += 1
             end_working_days += 1
         elif current_date.weekday() < 5 and current_date not in list(holidays[int(ddf.strftime('%Y'))]):
-            if current_date < now_date:
+            if current_date <= now_date:
                 now_working_days += 1
             end_working_days += 1
         current_date += datetime.timedelta(days=1)
@@ -184,6 +184,11 @@ text5 = html.P(children='Оборот ВП в прошлом году: ' + str(d
 text6 = html.P(children='Прогноз ВП: ' + str(int((df['ВП T'][-1]) / now_working_days * end_working_days // 1000000)) + ' млн. руб', className="header-description")
 text7 = html.P(children='Прогноз прироста по обороту (ср-дн): ' + str(int((((df['ВП T'][-1]) / now_working_days) / (df['ВП -12'][-1] / end_working_days_2) - 1) * 100)) + ' %', className="header-description")
 
+text8 = html.P(children='Прошло рабочих дней: ' + str(now_working_days) + " из " + str(end_working_days) + ". Всего раб. дней в прошлом году: " + str(end_working_days_2), className="header-description")
+
+# print('Рабочих дней сейчас', now_working_days, 'в прошлом году', now_working_days_2)
+# print('Всего рабочих дней', end_working_days, 'в прошлом году', end_working_days_2)
+
 # Создаем графики
 total_result = {'Месяц': list(df.columns[13:0:-1]), 'Отгрузка': list(df.loc['total'][13:0:-1]), 'Прибыль': list(df.loc['total'][29:16:-1])}
 fig1 = px.line(total_result, x='Месяц', y='Отгрузка', title='Динамика оборота по месяцам')
@@ -261,7 +266,7 @@ app.layout = html.Div(style={'background-image': 'url("/assets/bg.jpg")',
            'background-size': '1920px 1152px'}, children=[
     html.H1(children= 'Аналитика продаж сетевых партнеров на ' + str(now_date), className="header-title",),
     html.Br(),
-    text, text1, text2, text3,
+    text, text1, text2, text3, text8,
     dcc.Graph(figure=fig1, className="wrapper",),
     html.Br(),
     text4, text5, text6, text7,
