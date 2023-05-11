@@ -63,7 +63,7 @@ def workind_days():
         if current_date in list(holidays['working_days']):  # рабочие дни исключения
             now_working_days_2 += 1
             end_working_days_2 += 1
-        elif current_date.weekday() < 5 and current_date not in list(holidays[int(ddf.strftime('%Y'))]):
+        elif current_date.weekday() < 5 and current_date not in list(holidays[int(ddf.strftime('%Y')) - 1]):
             if current_date < now_date_2:
                 now_working_days_2 += 1
             end_working_days_2 += 1
