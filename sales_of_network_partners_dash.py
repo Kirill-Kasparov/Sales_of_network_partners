@@ -192,7 +192,17 @@ text8 = html.P(children='Прошло рабочих дней: ' + str(now_worki
 # print('Всего рабочих дней', end_working_days, 'в прошлом году', end_working_days_2)
 
 # Создаем графики
-total_result = {'Месяц': list(df.columns[13:0:-1]), 'Отгрузка, млн. руб.': list(df.loc['total'][13:0:-1] // 1000000), 'Прибыль, млн. руб.': list(df.loc['total'][29:16:-1] // 1000000)}
+# получаем месяца, вместо столбцов Т, -1, -2...
+col_for_total_result = [now_date.strftime('%d.%m.%Y')]    # вместо list(df.columns[13:0:-1])
+for i in range(1, 13):
+    prev_month = now_date - datetime.timedelta(days=28 * i)
+    while prev_month.strftime('%m.%Y') in col_for_total_result or prev_month.strftime('%m.%Y') == now_date.strftime('%m.%Y'):   # поправка на дни
+        prev_month = prev_month - datetime.timedelta(days=1)
+    col_for_total_result.append(prev_month.strftime('%m.%Y'))
+
+# формируем таблицу
+total_result = {'Месяц': col_for_total_result[::-1], 'Отгрузка, млн. руб.': list(df.loc['total'][13:0:-1] // 1000000), 'Прибыль, млн. руб.': list(df.loc['total'][29:16:-1] // 1000000)}
+# строим график
 fig1 = px.line(total_result, x='Месяц', y='Отгрузка, млн. руб.', title='Динамика оборота по месяцам', text='Отгрузка, млн. руб.')
 fig1.update_layout(font=dict(size=18))    # увеличиваем шрифт
 fig2 = px.bar(total_result, x='Месяц', y='Прибыль, млн. руб.', title='Прибыль по месяцам', text='Прибыль, млн. руб.')
