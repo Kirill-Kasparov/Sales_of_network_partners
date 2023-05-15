@@ -8,6 +8,8 @@ from dash import dcc as dcc
 from dash import html as html
 from dash import Dash, dash_table
 import plotly.express as px
+import plotly.graph_objs as go
+
 
 def workind_days():
     # Получаем дату из файла
@@ -190,18 +192,30 @@ text8 = html.P(children='Прошло рабочих дней: ' + str(now_worki
 # print('Всего рабочих дней', end_working_days, 'в прошлом году', end_working_days_2)
 
 # Создаем графики
-total_result = {'Месяц': list(df.columns[13:0:-1]), 'Отгрузка': list(df.loc['total'][13:0:-1]), 'Прибыль': list(df.loc['total'][29:16:-1])}
-fig1 = px.line(total_result, x='Месяц', y='Отгрузка', title='Динамика оборота по месяцам')
-fig2 = px.bar(total_result, x='Месяц', y='Прибыль', title='Прибыль по месяцам')
+# получаем месяца, вместо столбцов Т, -1, -2...
+col_for_total_result = [now_date.strftime('%d.%m.%Y')]    # вместо list(df.columns[13:0:-1])
+for i in range(1, 13):
+    prev_month = now_date - datetime.timedelta(days=28 * i)
+    while prev_month.strftime('%m.%Y') in col_for_total_result or prev_month.strftime('%m.%Y') == now_date.strftime('%m.%Y'):   # поправка на дни
+        prev_month = prev_month - datetime.timedelta(days=1)
+    col_for_total_result.append(prev_month.strftime('%m.%Y'))
+
+# формируем таблицу
+total_result = {'Месяц': col_for_total_result[::-1], 'Отгрузка, млн. руб.': list(df.loc['total'][13:0:-1] // 1000000), 'Прибыль, млн. руб.': list(df.loc['total'][29:16:-1] // 1000000)}
+# строим график
+fig1 = px.line(total_result, x='Месяц', y='Отгрузка, млн. руб.', title='Динамика оборота по месяцам', text='Отгрузка, млн. руб.')
+fig1.update_layout(font=dict(size=18))    # увеличиваем шрифт
+fig2 = px.bar(total_result, x='Месяц', y='Прибыль, млн. руб.', title='Прибыль по месяцам', text='Прибыль, млн. руб.')
+fig2.update_layout(font=dict(size=18))    # увеличиваем шрифт
 
 
 x_bar_top = list(map(lambda x: x[:30] if len(x) > 30 else x, df['Название сети'][top * -1 - 1:-1]))    # Укарачиваем длину названий
 y_bar_top = df['Прирост'][top * -1 - 1:-1] // 1000000    # "top * -1 - 1" - это список с конца +1 строка, так как последняя строка df - ИТОГО
-fig3 = px.bar(total_result, x=x_bar_top, y=y_bar_top, title='ТОП сетей текущего месяца (в млн. руб.)')
+fig3 = px.bar(total_result, x=x_bar_top, y=y_bar_top, title='ТОП сетей текущего месяца (в млн. руб.)', text=y_bar_top)
 
 x_bar_anti = list(map(lambda x: x[:30] if len(x) > 30 else x, df['Название сети'][:top])) # Укарачиваем длину названий
 y_bar_anti = df['Прирост'][:top] // 1000000
-fig4 = px.bar(total_result, x=x_bar_anti, y=y_bar_anti, title='Анти ТОП сетей текущего месяца (в млн. руб.)')
+fig4 = px.bar(total_result, x=x_bar_anti, y=y_bar_anti, title='Анти ТОП сетей текущего месяца (в млн. руб.)', text=y_bar_anti)
 
 # Создаем таблицы
 df.drop(['Отгрузка по личным заказам', 'Отгрузка'], axis=1, inplace=True)
@@ -284,7 +298,7 @@ app.layout = html.Div(style={'background-image': 'url("/assets/bg.jpg")',
     html.Br(),
     table,
     html.Br(),
-    html.H1(children='Привлеченные сети', className="header-title", ),
+    html.H1(children='Привлеченные сети (оборот в млн. руб.)', className="header-title", ),
     html.Br(),
     table_stars,
     html.Br(),
@@ -311,7 +325,7 @@ app.layout = html.Div(style={'background-image': 'url("/assets/bg.jpg")',
         selected_rows=[],
         page_action="native",
         page_current= 0,
-        page_size= 10,
+        page_size= 20,
     ),
     html.Div(id='datatable-interactivity-container'),
     html.Br(),
